@@ -51,13 +51,13 @@ pub struct Rt<'a, Cfg> {
     pub cfg: Cfg,
 }
 
-impl<'a, Cfg: Default> Default for Rt<'a, Cfg> {
+impl<Cfg: Default> Default for Rt<'_, Cfg> {
     fn default() -> Self {
         Self::with_config(Default::default())
     }
 }
 
-impl<'a, Cfg: Config> Rt<'a, Cfg> {
+impl<Cfg: Config> Rt<'_, Cfg> {
     pub fn proc(&mut self) {
         self.skip_trivias();
         loop {
@@ -267,7 +267,7 @@ impl<'a, Cfg: Config> Rt<'a, Cfg> {
             StringLit => {
                 let tok = self.tok();
                 let content = &tok[1..tok.len()-1];
-                if tok.starts_with("\"") {
+                if tok.starts_with('"') {
                     let mut escape = false;
                     let mut buf = String::with_capacity(content.len());
                     for ch in content.chars() {
@@ -278,7 +278,7 @@ impl<'a, Cfg: Config> Rt<'a, Cfg> {
                             '"' if escape => buf.push('"'),
                             '\\' if escape => buf.push('\\'),
                             '\\' => { escape = true; continue },
-                            _ if escape => self.error("Invalid soft string escape `\\{ch}`"),
+                            _ if escape => self.error(&format!("Invalid soft string escape `\\{ch}`")),
                             _ => buf.push(ch),
                         }
                         escape = false;
@@ -438,9 +438,9 @@ impl<'a, Cfg> Rt<'a, Cfg> {
 
     fn string(&self) -> &'a str {
         let rest = self.rest();
-        if rest.starts_with('"') {
+        if let Some(content) = rest.strip_prefix('"') {
             let mut escape = false;
-            for (i, ch) in rest[1..].char_indices() {
+            for (i, ch) in content.char_indices() {
                 if mem::take(&mut escape) {
                     continue;
                 }
@@ -472,11 +472,11 @@ mod mark {
     #[derive(Debug, Clone, Copy)]
     pub struct Mark(usize);
     impl<Cfg> Rt<'_, Cfg> {
-        pub fn mark(&self) -> Mark {
+        pub(crate) fn mark(&self) -> Mark {
             Mark(self.i)
         }
 
-        pub fn back(&mut self, Mark(mark): Mark) {
+        pub(crate) fn back(&mut self, Mark(mark): Mark) {
             debug_assert!(mark < self.i);
             self.i = mark;
         }

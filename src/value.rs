@@ -1,7 +1,11 @@
 use std::{cmp::Ordering::*, fmt};
 
+fn unum(n: f64) -> usize {
+    n.clamp(usize::MIN as f64, usize::MAX as f64).floor() as usize
+}
+
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) enum Value {
+pub enum Value {
     Number(f64),
     String(String),
     Null,
@@ -36,7 +40,7 @@ impl Value {
         match self {
             Value::Number(n) => *n,
             Value::String(_) => 1.0,
-            Value::Null => unit as f64,
+            Value::Null => f64::from(unit),
         }
     }
 
@@ -107,7 +111,7 @@ impl Value {
                     s.clear();
                 } else {
                     let basic = s.len();
-                    for _ in 1..count as u64 {
+                    for _ in 1..unum(count) {
                         s.extend_from_within(..basic);
                     }
                 }
@@ -120,7 +124,7 @@ impl Value {
         match self {
             Value::Number(n) => *n /= rhs.num(1),
             Value::String(s) => {
-                let count = rhs.num(0).floor() as usize;
+                let count = unum(rhs.num(0));
                 let new_len = s.char_indices().nth(count)
                     .map_or(s.len(), |it| it.0);
                 s.truncate(new_len);
@@ -133,7 +137,7 @@ impl Value {
         match self {
             Value::Number(n) => *n %= rhs.num(1),
             Value::String(s) => {
-                let count = rhs.num(0).floor() as usize;
+                let count = unum(rhs.num(0));
                 let new_len = s.char_indices().nth(count)
                     .map_or(s.len(), |it| it.0);
                 s.drain(..new_len);

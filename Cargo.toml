@@ -6,4 +6,6 @@ edition = "2024"
 [dependencies]
 char-classes = "0.3.4"
 expect-test = "1.5.1"
+fs-err = "3.2.0"
+getopts-macro = "0.1.8"
 line-column = "0.2.0"

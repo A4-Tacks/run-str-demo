@@ -33,3 +33,12 @@ expr    = ;;pratt implements;;
 trivia  = ;;any-whitespace;;
         / "//" *(%x0-9 / %xb-10ffff)
 ```
+
+**Example**:
+
+```sh
+$ cargo run ./examples/hello_world.rsd
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.10s
+     Running `target/debug/run-str-demo ./examples/hello_world.rsd`
+Hello, World!
+```

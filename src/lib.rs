@@ -42,15 +42,6 @@ pub trait Config {
     fn print(&mut self, args: fmt::Arguments<'_>);
 }
 
-// proc = *stmt
-// block = { *stmt }
-// stmt = if expr block *(elif block) [else block]
-//      / while expr block
-//      / block
-//      / cmd ;
-// cmd  = print expr
-//      / ident = expr
-
 #[derive(Debug, Clone)]
 pub struct Rt<'a, Cfg> {
     src: &'a str,
@@ -260,11 +251,28 @@ impl<'a, Cfg: Config> Rt<'a, Cfg> {
             },
             StringLit => {
                 let tok = self.tok();
-                self.bump(tok);
+                let content = &tok[1..tok.len()-1];
                 if tok.starts_with("\"") {
-                    todo!()
+                    let mut escape = false;
+                    let mut buf = String::with_capacity(content.len());
+                    for ch in content.chars() {
+                        match ch {
+                            'n' if escape => buf.push('\n'),
+                            'r' if escape => buf.push('\r'),
+                            't' if escape => buf.push('\t'),
+                            '"' if escape => buf.push('"'),
+                            '\\' if escape => buf.push('\\'),
+                            '\\' => { escape = true; continue },
+                            _ if escape => self.error("Invalid soft string escape `\\{ch}`"),
+                            _ => buf.push(ch),
+                        }
+                        escape = false;
+                    }
+                    self.bump(tok);
+                    Value::String(buf)
                 } else {
-                    Value::String(tok[1..tok.len()-1].to_owned())
+                    self.bump(tok);
+                    Value::String(content.to_owned())
                 }
             }
             kind => self.error(&format!("Invalid expression {kind:?}")),
@@ -417,13 +425,13 @@ impl<'a, Cfg> Rt<'a, Cfg> {
         let rest = self.rest();
         if rest.starts_with('"') {
             let mut escape = false;
-            for (i, ch) in rest.char_indices() {
+            for (i, ch) in rest[1..].char_indices() {
                 if mem::take(&mut escape) {
                     continue;
                 }
                 if ch == '\\' { escape = true }
                 if ch == '"' {
-                    return rest.next_boundary(i);
+                    return rest.next_boundary(i+1);
                 }
             }
             self.error("String literal not terminated")
@@ -708,6 +716,20 @@ mod tests {
         "#]]);
         check(r#"print 'foo\n\""';"#, expect![[r#"
             foo\n\""
+        "#]]);
+    }
+
+    #[test]
+    fn print_soft_string() {
+        check(r#"print "foo\nbar";"#, expect![[r#"
+            foo
+            bar
+        "#]]);
+        check(r#"print "foo\"bar";"#, expect![[r#"
+            foo"bar
+        "#]]);
+        check(r#"print "foo\tbar";"#, expect![[r#"
+            foo	bar
         "#]]);
     }
 

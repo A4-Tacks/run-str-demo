@@ -4,7 +4,7 @@ Features:
 
 - [x] print output
 - [x] hard string literal
-- [ ] soft string literal
+- [x] soft string literal
 - [x] float literal
 - [x] comments
 - [x] operations

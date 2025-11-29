@@ -89,7 +89,22 @@ impl<'a, Cfg: Config> Rt<'a, Cfg> {
 
     fn while_(&mut self) {
         self.bump("while");
-        todo!()
+        let mark = self.mark();
+
+        loop {
+            let mut cond = false;
+            self.expr(|_, v| cond = v.bool());
+
+            if !cond {
+                self.ignore();
+                self.block();
+                self.ognore();
+                return;
+            }
+
+            self.block();
+            self.back(mark);
+        }
     }
 
     fn if_(&mut self) {
@@ -451,6 +466,23 @@ impl<'a, Cfg> Rt<'a, Cfg> {
     }
 }
 
+mod mark {
+    use crate::Rt;
+
+    #[derive(Debug, Clone, Copy)]
+    pub struct Mark(usize);
+    impl<Cfg> Rt<'_, Cfg> {
+        pub fn mark(&self) -> Mark {
+            Mark(self.i)
+        }
+
+        pub fn back(&mut self, Mark(mark): Mark) {
+            debug_assert!(mark < self.i);
+            self.i = mark;
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use expect_test::{Expect, expect};
@@ -481,6 +513,9 @@ mod tests {
         let mut rt = Rt::with_config(Output(String::new()));
         rt.load_source(src);
         rt.proc();
+
+        assert_eq!(rt.ignore_level, 0, "Not cleanly effects");
+
         rt
     }
 
@@ -795,6 +830,44 @@ mod tests {
             2
             6
             7
+        "#]]);
+    }
+
+    #[test]
+    fn while_loop() {
+        check(r#"
+            i = 0;
+            while i < 3 {
+                print i;
+                i = i + 1;
+            }
+            print 'i: '+i;
+        "#, expect![[r#"
+            0
+            1
+            2
+            i: 3
+        "#]]);
+        check(r#"
+            i = 2;
+            while i < 3 {
+                print i;
+                i = i + 1;
+            }
+            print 'i: '+i;
+        "#, expect![[r#"
+            2
+            i: 3
+        "#]]);
+        check(r#"
+            i = 3;
+            while i < 3 {
+                print i;
+                i = i + 1;
+            }
+            print 'i: '+i;
+        "#, expect![[r#"
+            i: 3
         "#]]);
     }
 }

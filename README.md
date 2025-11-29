@@ -12,7 +12,7 @@ Features:
 - [x] block
 - [x] if statement
 - [ ] elif & else statement
-- [ ] while statement
+- [x] while statement
 - [ ] builtin functions call
 - [ ] function
 - [ ] scopes

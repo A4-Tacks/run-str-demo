@@ -74,7 +74,7 @@ impl Value {
     }
 
     pub(crate) fn apply_not(&mut self) {
-        *self = self.bool().into()
+        *self = (!self.bool()).into()
     }
 
     pub(crate) fn apply_add(&mut self, rhs: Self) {

@@ -573,6 +573,25 @@ mod tests {
         }
 
         #[test]
+        fn simple_not() {
+            check("print !null;", expect![[r#"
+                1
+            "#]]);
+            check("print !0;", expect![[r#"
+                NULL
+            "#]]);
+            check("print !!null;", expect![[r#"
+                NULL
+            "#]]);
+            check("print !!3;", expect![[r#"
+                1
+            "#]]);
+            check("print !!'';", expect![[r#"
+                1
+            "#]]);
+        }
+
+        #[test]
         fn add() {
             check("print 1+2;", expect![[r#"
                 3

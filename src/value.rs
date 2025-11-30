@@ -1,6 +1,9 @@
 use std::{cmp::Ordering::*, fmt};
 
 fn unum(n: f64) -> usize {
+    if n.is_nan() {
+        return 0;
+    }
     n.clamp(usize::MIN as f64, usize::MAX as f64).floor() as usize
 }
 
@@ -65,9 +68,8 @@ impl Value {
         match self {
             Value::Number(n) => *n = -*n,
             Value::String(s) => {
-                let mut new = String::with_capacity(s.len());
-                new.extend(s.chars().rev());
-                *s = new;
+                let count = s.chars().count();
+                *self = Self::Number(count as f64)
             },
             Value::Null => (),
         }
@@ -90,6 +92,9 @@ impl Value {
             Value::Number(n) => *n -= rhs.num(0),
             Value::String(s) => {
                 let pat = rhs.str();
+                if pat.is_empty() {
+                    return;
+                }
                 for i in 0..s.len() {
                     while let Some(rest) = s.get(i..)
                         && rest.starts_with(&pat)
@@ -107,11 +112,14 @@ impl Value {
             Value::Number(n) => *n *= rhs.num(1),
             Value::String(s) => {
                 let count = rhs.num(0).floor();
-                if count <= 0.0 {
+                if count < -0.3 {
+                    reverse(s);
+                }
+                if (-0.3..=0.3).contains(&count) {
                     s.clear();
                 } else {
                     let basic = s.len();
-                    for _ in 1..unum(count) {
+                    for _ in 1..unum(count.abs()) {
                         s.extend_from_within(..basic);
                     }
                 }
@@ -127,7 +135,7 @@ impl Value {
                 let count = unum(rhs.num(0));
                 let new_len = s.char_indices().nth(count)
                     .map_or(s.len(), |it| it.0);
-                s.truncate(new_len);
+                s.drain(..new_len);
             },
             Value::Null => *self = rhs,
         }
@@ -140,7 +148,7 @@ impl Value {
                 let count = unum(rhs.num(0));
                 let new_len = s.char_indices().nth(count)
                     .map_or(s.len(), |it| it.0);
-                s.drain(..new_len);
+                s.truncate(new_len);
             },
             Value::Null => *self = Self::Number(0.0),
         }
@@ -162,6 +170,12 @@ impl Value {
     pub(crate) fn apply_replace(&mut self, rhs: Self) {
         *self = rhs;
     }
+}
+
+fn reverse(s: &mut String) {
+    let mut new = String::with_capacity(s.len());
+    new.extend(s.chars().rev());
+    *s = new;
 }
 
 impl Eq for Value {}

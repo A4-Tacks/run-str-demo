@@ -500,7 +500,12 @@ mod tests {
     #[track_caller]
     fn check(src: &str, expect: Expect) {
         let rt = run(src);
-        expect.assert_eq(&rt.cfg.0);
+        let actual = rt.cfg.0.as_str();
+        if actual == "\n" {
+            expect.assert_eq("<only has empty newline>");
+        } else {
+            expect.assert_eq(actual);
+        }
     }
 
     #[track_caller]
@@ -759,6 +764,160 @@ mod tests {
             "#]]);
             check("print 1 && null || 3 && null || 5 && 6;", expect![[r#"
                 6
+            "#]]);
+        }
+    }
+
+    mod str_ops {
+        use super::*;
+
+        #[test]
+        fn add() {
+            check(r#"print 'a'+'b';"#, expect![[r#"
+                ab
+            "#]]);
+            check(r#"print 'a'+2;"#, expect![[r#"
+                a2
+            "#]]);
+            check(r#"print 2+'a';"#, expect![[r#"
+                3
+            "#]]);
+            check(r#"print 'a'+null;"#, expect![[r#"
+                a
+            "#]]);
+            check(r#"print null+'a';"#, expect![[r#"
+                a
+            "#]]);
+        }
+
+        #[test]
+        fn sub() {
+            check(r#"print 'a.b.c'-'.';"#, expect![[r#"
+                abc
+            "#]]);
+            check(r#"print 'a.b.c'-'';"#, expect![[r#"
+                a.b.c
+            "#]]);
+            check(r#"print 'a..b..c'-'..';"#, expect![[r#"
+                abc
+            "#]]);
+            check(r#"print 'a..b..c'-'.';"#, expect![[r#"
+                abc
+            "#]]);
+            check(r#"print 'a.b.c'-'..';"#, expect![[r#"
+                a.b.c
+            "#]]);
+        }
+
+        #[test]
+        fn mul() {
+            check(r#"print ''*2;"#, expect!["<only has empty newline>"]);
+            check(r#"print 'a'*2;"#, expect![[r#"
+                aa
+            "#]]);
+            check(r#"print 'ab'*2;"#, expect![[r#"
+                abab
+            "#]]);
+            check(r#"print 'a'*1;"#, expect![[r#"
+                a
+            "#]]);
+            check(r#"print 'ab'*1;"#, expect![[r#"
+                ab
+            "#]]);
+            check(r#"print 'ab'*0;"#, expect!["<only has empty newline>"]);
+            check(r#"print 'ab'*-1;"#, expect![[r#"
+                ba
+            "#]]);
+            check(r#"print 'ab'*-2;"#, expect![[r#"
+                baba
+            "#]]);
+            check(r#"print 'ab'*null;"#, expect!["<only has empty newline>"]);
+            check(r#"print 'ab'*'x';"#, expect![[r#"
+                ab
+            "#]]);
+        }
+
+        #[test]
+        fn div() {
+            check(r#"print 'abc'/0;"#, expect![[r#"
+                abc
+            "#]]);
+            check(r#"print 'abc'/1;"#, expect![[r#"
+                bc
+            "#]]);
+            check(r#"print 'abc'/2;"#, expect![[r#"
+                c
+            "#]]);
+            check(r#"print 'abc'/3;"#, expect!["<only has empty newline>"]);
+            check(r#"print 'abc'/4;"#, expect!["<only has empty newline>"]);
+            check(r#"print ''/0;"#, expect!["<only has empty newline>"]);
+            check(r#"print ''/1;"#, expect!["<only has empty newline>"]);
+            check(r#"print ''/2;"#, expect!["<only has empty newline>"]);
+            check(r#"print '测试'/0;"#, expect![[r#"
+                测试
+            "#]]);
+            check(r#"print '测试'/1;"#, expect![[r#"
+                试
+            "#]]);
+            check(r#"print '测试'/2;"#, expect!["<only has empty newline>"]);
+            check(r#"print '测试'/3;"#, expect!["<only has empty newline>"]);
+            check(r#"print '测试'/4;"#, expect!["<only has empty newline>"]);
+        }
+
+        #[test]
+        fn rem() {
+            check(r#"print 'abc'%0;"#, expect!["<only has empty newline>"]);
+            check(r#"print 'abc'%1;"#, expect![[r#"
+                a
+            "#]]);
+            check(r#"print 'abc'%2;"#, expect![[r#"
+                ab
+            "#]]);
+            check(r#"print 'abc'%3;"#, expect![[r#"
+                abc
+            "#]]);
+            check(r#"print 'abc'%4;"#, expect![[r#"
+                abc
+            "#]]);
+            check(r#"print 'abc测试'%2;"#, expect![[r#"
+                ab
+            "#]]);
+            check(r#"print 'abc测试'%3;"#, expect![[r#"
+                abc
+            "#]]);
+            check(r#"print 'abc测试'%4;"#, expect![[r#"
+                abc测
+            "#]]);
+            check(r#"print 'abc测试'%5;"#, expect![[r#"
+                abc测试
+            "#]]);
+            check(r#"print 'abc测试'%6;"#, expect![[r#"
+                abc测试
+            "#]]);
+            check(r#"print 'abc测试'%7;"#, expect![[r#"
+                abc测试
+            "#]]);
+        }
+
+        #[test]
+        fn neg() {
+            check(r#"print -'';"#, expect![[r#"
+                0
+            "#]]);
+            check(r#"print -'a';"#, expect![[r#"
+                1
+            "#]]);
+            check(r#"print -'ab';"#, expect![[r#"
+                2
+            "#]]);
+            check(r#"print -'abc';"#, expect![[r#"
+                3
+            "#]]);
+            check(r#"print -'abc测';"#, expect![[r#"
+                4
+            "#]]);
+            check(r#"print -'abc测试';"#, expect![[r#"
+                5
             "#]]);
         }
     }
